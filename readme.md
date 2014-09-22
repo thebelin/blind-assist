@@ -1,6 +1,7 @@
-_Blind Assist
+Blind Assist_
 
-Another project by Belin Fieldson
+Another project by
+Belin Fieldson__
 
 Use this to build your own haptic visual assistance system.  The code can be modified and used in any way you want to.
 
