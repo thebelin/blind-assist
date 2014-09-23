@@ -8,15 +8,15 @@
 
    The circuit:
   Rangefinder connection:
-	* VCC connection of the sensor attached to +5V
-	* GND connection of the sensor attached to ground
-	* TRIG connection of the sensor attached to digital pin 2
-	* ECHO connection of the sensor attached to digital pin 4
+  * VCC connection of the sensor attached to +5V
+  * GND connection of the sensor attached to ground
+  * TRIG connection of the sensor attached to digital pin 2
+  * ECHO connection of the sensor attached to digital pin 4
 
   Pyroelectric sensor connection:
-	* VCC connection of the sensor attached to +5V
-	* GND connection of the sensor attached to ground
-	* TRIG connection of the sensor attached to digital pin 6
+  * VCC connection of the sensor attached to +5V
+  * GND connection of the sensor attached to ground
+  * TRIG connection of the sensor attached to digital pin 6
   
   Vibration depth sensor Feedback connection
   * VCC connection of the vibration motor to A0
@@ -48,9 +48,15 @@ const int hapticPyroPin = A2;
 const int maxRange = 300;
 const int minRange = 2;
 
-// Minimum pulse length for PWM driven vibrator feedback mechanism is 1/10th of a second
-const int minPulse = 10;
-const int maxPulse = 150;
+// Minimum pulse length for PWM driven vibrator feedback mechanism 
+const int minPulse = 5;
+const int maxPulse = 200;
+
+// The length of the pyro haptic pulse
+const int pyroPulseLength = 250;
+
+// The length of time between ping sequences
+const int pingRate = 500;
 
 void setup() {
   // initialize serial communication:
@@ -72,33 +78,39 @@ long stateDuration = 0,
 // The time in ms to remain off to form the PWM
   offDuration = 0,
 
-// The last time a depth measurement was made by ping
+// The last time an event happened for the distance haptic
   lastMillis = 0,
   
+// The last time an event happened for the pyro haptic
+  pyroLastMillis = 0,
+  
+  pingLastMillis = 0,
+
 // The duration of the PWM wave for the pyroelectric feedback
   heatDuration = 0,
 
 // The time of the last heat measurement
-  lastHeatMillis = 0;
+  lastHeatMillis = 0,
+
+// The distance in cm to the nearest object
+  cm = 0;
 
 void loop()
 {
-  // establish variables for duration of the ping, 
-  // and the distance result in centimeters:
   // The duration of the ping
   long duration,
-  
-  // The distance in cm to the nearest object
-  cm = 0,
-  
+    
   // The time in ms of the last loop
   lastLoop,
   
   // The state of the pyroelectric sensor
   pyroState = 0;
   
-  // Only check distance if we're not already vibrating
-  if (vibeState == false) {
+  // Only check distance every pingRate milliseconds
+  if (pingLastMillis + pingRate < millis()) {
+    // record the time of this ping
+    pingLastMillis = millis();
+
     // The sensor is triggered by a HIGH pulse of 10 or more microseconds.
     // Give a short LOW pulse beforehand to ensure a clean HIGH pulse:
     pinMode(trigPin, OUTPUT);
@@ -116,12 +128,19 @@ void loop()
   
     // convert the time into a distance
     cm = microsecondsToCentimeters(duration);
+    // Debug the distance
+    Serial.print(cm);
+    Serial.print("cm");
+    Serial.println();
     
-    // change the analog out buzzer indicator based on the range
-    // This is a change to the time spent at high voltage vs in low
-    // The adjustement is essentially a PWM (Pulse Width Modulation) signal
+    // Get a stateDuration for the distance measured
     stateDuration = getPWMDuration(cm, minRange, maxRange);
+  }
 
+  // change the analog out buzzer indicator based on the range
+  // This is a change to the time spent at high voltage vs in low
+  // The adjustement is essentially a PWM (Pulse Width Modulation) signal
+  if (vibeState == false) {
     // If there's a valid state duration to supply
     if (stateDuration != 0) {
       
@@ -129,7 +148,7 @@ void loop()
       if (millis() > lastMillis + offDuration) {
 
         // reverse map the duration of the off state
-        offDuration = map(stateDuration, minPulse, maxPulse, maxPulse, minPulse);
+        offDuration = map(stateDuration, minPulse, maxPulse, maxPulse, minPulse)* 3;
 
         // Debug the stateDuration
         Serial.print(stateDuration);
@@ -168,20 +187,39 @@ void loop()
  
   // This delay exists for the sake of sanity while debugging
   // @todo remove the delay
-  delayMicroseconds(100);
+  //delayMicroseconds(100);
   
   pyroState = digitalRead(pyroPin);
   
-  if (pyroState != lastPyroState) {
-    // Record the pyro state to sense the next change
-    lastPyroState = pyroState;
+  if (pyroVibeState == false) {
+    if (pyroState != lastPyroState) {
+      // Record the pyro state to sense the next change
+      lastPyroState = pyroState;
+  
+      // Do pyro buzz
+      analogWrite(hapticPyroPin, 255);
+  
+      // Turn the state on
+      pyroVibeState = true;
 
-    // Do pyro buzz
+      // Mark the time 
+      pyroLastMillis = millis();
 
-    // pyro debug
-//    Serial.print("pyroPin: ");
-//    Serial.print(pyroState);
-//    Serial.println();
+      // pyro debug
+  //    Serial.print("pyroPin: ");
+  //    Serial.print(pyroState);
+  //    Serial.println();
+    }
+  }
+
+  if (pyroVibeState == true) {
+    if (pyroLastMillis + pyroPulseLength < millis()) {
+      // Stop pyro buzz
+      analogWrite(hapticPyroPin, 0);
+  
+      // Turn the state off
+      pyroVibeState = false;
+    }
   }
 }
 
