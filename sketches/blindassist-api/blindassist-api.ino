@@ -8,15 +8,15 @@
 
    The circuit:
   Rangefinder connection:
-  * VCC connection of the sensor attached to +5V
-  * GND connection of the sensor attached to ground
-  * TRIG connection of the sensor attached to digital pin 2
-  * ECHO connection of the sensor attached to digital pin 4
+	* VCC connection of the sensor attached to +5V
+	* GND connection of the sensor attached to ground
+	* TRIG connection of the sensor attached to digital pin 2
+	* ECHO connection of the sensor attached to digital pin 4
 
   Pyroelectric sensor connection:
-  * VCC connection of the sensor attached to +5V
-  * GND connection of the sensor attached to ground
-  * TRIG connection of the sensor attached to digital pin 6
+	* VCC connection of the sensor attached to +5V
+	* GND connection of the sensor attached to ground
+	* TRIG connection of the sensor attached to digital pin 6
   
   Vibration depth sensor Feedback connection
   * VCC connection of the vibration motor to A0
@@ -245,3 +245,4 @@ long microsecondsToCentimeters(long microseconds)
   // object we take half of the distance travelled.
   return microseconds / 29 / 2;
 }
+
